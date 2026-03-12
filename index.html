@@ -198,6 +198,11 @@
 
         .button-primary { background: var(--blue); color: #fff; }
         .button-secondary { background: #eef3ff; color: var(--blue); }
+        .button-ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--line);
+        }
 
         .search-panel {
             padding: 22px;
@@ -226,7 +231,7 @@
         .search-form {
             margin-top: 18px;
             display: grid;
-            grid-template-columns: 2fr 1fr auto;
+            grid-template-columns: 1fr auto auto;
             gap: 12px;
         }
 
@@ -341,6 +346,13 @@
             font-weight: 700;
             color: #27406d;
             font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .state-chip.active {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: #fff;
         }
 
         .empty {
@@ -388,7 +400,7 @@
                     <h1>Severe and extreme alerts, nationwide.</h1>
                     <p>
                         This public dashboard shows active NOAA alert regions and affected states for
-                        `Severe` and `Extreme` conditions, plus a city and state lookup for checking one location on demand.
+                        `Severe` and `Extreme` conditions, with a simple filter for city names or states.
                     </p>
                 </div>
                 <div class="hero-meta">
@@ -431,26 +443,26 @@
         <section class="search-panel">
             <div class="panel-head">
                 <div>
-                    <h2>Search City and State</h2>
+                    <h2>Filter by City or State</h2>
                     <p>
-                        Search one location to see whether it currently has an active `Severe` or `Extreme`
-                        weather alert. Example: `Dallas` and `TX` or `Dallas` and `Texas`.
+                        Use one search box to filter the active alert dashboard by city name, 2-letter state code,
+                        or full state name. Example: `Dallas`, `TX`, or `Texas`.
                     </p>
                 </div>
             </div>
 
             <form class="search-form" id="search-form">
                 <div class="field">
-                    <label for="city-input">City</label>
-                    <input id="city-input" name="city" type="text" placeholder="Dallas" required>
-                </div>
-                <div class="field">
-                    <label for="state-input">State</label>
-                    <input id="state-input" name="state" type="text" placeholder="TX or Texas" required>
+                    <label for="filter-input">City or State</label>
+                    <input id="filter-input" name="query" type="text" placeholder="Dallas, TX, or Texas">
                 </div>
                 <div class="field">
                     <label>&nbsp;</label>
-                    <button class="button button-secondary" id="search-button" type="submit">Search</button>
+                    <button class="button button-secondary" id="search-button" type="submit">Apply Filter</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="button button-ghost" id="reset-button" type="button">Reset Filter</button>
                 </div>
             </form>
         </section>
@@ -459,7 +471,7 @@
             <div class="panel-head">
                 <div>
                     <h2>Search Result</h2>
-                    <p id="search-status">No search run yet.</p>
+                    <p id="search-status">No filter applied yet.</p>
                 </div>
             </div>
             <div id="search-content"></div>
@@ -478,13 +490,27 @@
             <div class="state-strip" id="state-strip"></div>
             <div class="alert-grid" id="nationwide-alerts"></div>
             <p class="footnote">
-                Notes: nationwide cards represent active alert regions from NOAA, while city/state search checks a
-                specific point using the location dataset in this project.
+                Notes: nationwide cards represent active alert regions from NOAA. Use the state chips or filter box
+                to narrow the list instantly.
             </p>
         </section>
     </div>
 
     <script>
+        const STATE_NAMES = {
+            AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+            CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
+            FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
+            IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+            ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota",
+            MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada",
+            NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York",
+            NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon",
+            PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota",
+            TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia",
+            WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming"
+        };
+
         const refreshButton = document.getElementById("refresh-button");
         const refreshStatus = document.getElementById("refresh-status");
         const stateStrip = document.getElementById("state-strip");
@@ -494,9 +520,14 @@
         const statUpdated = document.getElementById("stat-updated");
         const searchForm = document.getElementById("search-form");
         const searchButton = document.getElementById("search-button");
+        const resetButton = document.getElementById("reset-button");
         const searchResults = document.getElementById("search-results");
         const searchStatus = document.getElementById("search-status");
         const searchContent = document.getElementById("search-content");
+        const filterInput = document.getElementById("filter-input");
+        let allAlerts = [];
+        let allStates = [];
+        let activeFilter = "";
 
         function formatTimestamp(value) {
             if (!value) return "-";
@@ -512,14 +543,86 @@
                 .replaceAll("'", "&#39;");
         }
 
+        function normalizeQuery(value) {
+            return String(value || "").trim().toUpperCase();
+        }
+
+        function matchesFilter(alert, query) {
+            if (!query) return true;
+            const upper = normalizeQuery(query);
+            const stateMatch = (alert.states || []).some((state) => {
+                const fullName = STATE_NAMES[state] || "";
+                return state === upper || fullName.toUpperCase() === upper;
+            });
+            if (stateMatch) return true;
+
+            const haystack = [
+                alert.event,
+                alert.headline,
+                alert.area_desc,
+                ...(alert.areas || []),
+                ...(alert.states || []).map((state) => STATE_NAMES[state] || state),
+            ]
+                .join(" ")
+                .toUpperCase();
+            return haystack.includes(upper);
+        }
+
+        function renderResultsSummary(filteredAlerts, query) {
+            searchResults.classList.remove("hidden");
+            if (!query) {
+                searchStatus.textContent = "No filter applied. Showing all active alerts.";
+                searchContent.innerHTML = `
+                    <div class="search-summary">
+                        <div class="badge blue">All active alerts</div>
+                        <div class="alert-meta"><strong>Visible alerts:</strong> ${filteredAlerts.length}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!filteredAlerts.length) {
+                searchStatus.textContent = `No active severe or extreme alerts matched "${query}".`;
+                searchContent.innerHTML = `
+                    <div class="search-summary">
+                        <div class="badge green">No matches</div>
+                        <div class="alert-meta"><strong>Filter:</strong> ${escapeHtml(query)}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            searchStatus.textContent = `${filteredAlerts.length} active alert(s) matched "${query}".`;
+            searchContent.innerHTML = `
+                <div class="search-summary">
+                    <div class="badge ${filteredAlerts.some((item) => item.severity === "Extreme") ? "red" : "orange"}">
+                        ${filteredAlerts.length} active alert(s)
+                    </div>
+                    <div class="alert-meta"><strong>Filter:</strong> ${escapeHtml(query)}</div>
+                </div>
+            `;
+        }
+
         function renderStateStrip(states) {
             if (!states.length) {
                 stateStrip.innerHTML = "<div class=\"empty\">No states currently flagged with severe or extreme active alerts.</div>";
                 return;
             }
             stateStrip.innerHTML = states
-                .map((item) => `<span class="state-chip">${escapeHtml(item.state)}: ${item.active_alerts}</span>`)
+                .map((item) => {
+                    const fullName = STATE_NAMES[item.state] || item.state;
+                    const isActive = normalizeQuery(activeFilter) === item.state || normalizeQuery(activeFilter) === fullName.toUpperCase();
+                    return `<button class="state-chip ${isActive ? "active" : ""}" type="button" data-state="${escapeHtml(item.state)}" title="${escapeHtml(fullName)}">${escapeHtml(item.state)}: ${item.active_alerts}</button>`;
+                })
                 .join("");
+
+            stateStrip.querySelectorAll("[data-state]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const state = button.getAttribute("data-state") || "";
+                    filterInput.value = state;
+                    applyFilter(state);
+                });
+            });
         }
 
         function renderAlertCard(alert) {
@@ -543,6 +646,22 @@
             `;
         }
 
+        function renderNationwideAlerts(alerts) {
+            if (!alerts.length) {
+                nationwideAlerts.innerHTML = "<div class=\"empty\">No active severe or extreme alerts matched the current filter.</div>";
+                return;
+            }
+            nationwideAlerts.innerHTML = alerts.map(renderAlertCard).join("");
+        }
+
+        function applyFilter(query) {
+            activeFilter = String(query || "").trim();
+            const filteredAlerts = allAlerts.filter((alert) => matchesFilter(alert, activeFilter));
+            renderStateStrip(allStates);
+            renderNationwideAlerts(filteredAlerts);
+            renderResultsSummary(filteredAlerts, activeFilter);
+        }
+
         async function loadNationwide(forceRefresh = false) {
             refreshButton.disabled = true;
             refreshStatus.textContent = forceRefresh ? "Refreshing data..." : "Loading current alert snapshot...";
@@ -557,13 +676,15 @@
                 statStateCount.textContent = data.state_count;
                 statUpdated.textContent = formatTimestamp(data.generated_at);
                 refreshStatus.textContent = `Last refreshed ${formatTimestamp(data.generated_at)}`;
+                allAlerts = data.alerts || [];
+                allStates = data.states || [];
 
-                renderStateStrip(data.states || []);
-
-                if (!data.alerts || !data.alerts.length) {
+                if (!allAlerts.length) {
+                    renderStateStrip(allStates);
                     nationwideAlerts.innerHTML = "<div class=\"empty\">No active severe or extreme alerts were returned by NOAA.</div>";
+                    searchResults.classList.add("hidden");
                 } else {
-                    nationwideAlerts.innerHTML = data.alerts.map(renderAlertCard).join("");
+                    applyFilter(activeFilter);
                 }
             } catch (error) {
                 refreshStatus.textContent = error.message;
@@ -574,67 +695,18 @@
             }
         }
 
-        async function searchLocation(city, state) {
-            searchButton.disabled = true;
-            searchResults.classList.remove("hidden");
-            searchStatus.textContent = `Searching ${city}, ${state.toUpperCase()}...`;
-            searchContent.innerHTML = "";
-            try {
-                const params = new URLSearchParams({ city, state: state.toUpperCase() });
-                const response = await fetch(`/api/search?${params.toString()}`, { cache: "no-store" });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || "Unable to search this location.");
-                }
-
-                const query = data.query;
-                if (!data.has_alerts) {
-                    searchStatus.textContent = `No active severe or extreme alert for ${query.city}, ${query.state}.`;
-                    searchContent.innerHTML = `
-                        <div class="search-summary">
-                            <div class="badge green">No active severe or extreme alert</div>
-                            <div class="alert-meta"><strong>Location:</strong> ${escapeHtml(query.city)}, ${escapeHtml(query.state)}</div>
-                            <div class="alert-meta"><strong>Coordinates:</strong> ${query.lat}, ${query.lon}</div>
-                            <div class="alert-meta"><strong>Checked:</strong> ${escapeHtml(formatTimestamp(data.generated_at))}</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                searchStatus.textContent = `${data.alert_count} active severe/extreme alert(s) found for ${query.city}, ${query.state}.`;
-                searchContent.innerHTML = `
-                    <div class="search-summary">
-                        <div class="badge ${data.alerts.some((item) => item.severity === "Extreme") ? "red" : "orange"}">
-                            ${data.alert_count} active alert(s)
-                        </div>
-                        <div class="alert-meta"><strong>Location:</strong> ${escapeHtml(query.city)}, ${escapeHtml(query.state)}</div>
-                        <div class="alert-meta"><strong>Coordinates:</strong> ${query.lat}, ${query.lon}</div>
-                        <div class="alert-meta"><strong>Checked:</strong> ${escapeHtml(formatTimestamp(data.generated_at))}</div>
-                    </div>
-                    <div class="search-alerts">${data.alerts.map(renderAlertCard).join("")}</div>
-                `;
-            } catch (error) {
-                searchStatus.textContent = error.message;
-                searchContent.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
-            } finally {
-                searchButton.disabled = false;
-            }
-        }
-
         refreshButton.addEventListener("click", () => loadNationwide(true));
 
         searchForm.addEventListener("submit", (event) => {
             event.preventDefault();
-            const formData = new FormData(searchForm);
-            const city = String(formData.get("city") || "").trim();
-            const state = String(formData.get("state") || "").trim();
-            if (!city || !state) {
-                searchResults.classList.remove("hidden");
-                searchStatus.textContent = "Enter both city and state.";
-                searchContent.innerHTML = "<div class=\"empty\">Both fields are required.</div>";
-                return;
-            }
-            searchLocation(city, state);
+            searchButton.disabled = true;
+            applyFilter(filterInput.value);
+            searchButton.disabled = false;
+        });
+
+        resetButton.addEventListener("click", () => {
+            filterInput.value = "";
+            applyFilter("");
         });
 
         loadNationwide(false);
