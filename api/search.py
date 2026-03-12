@@ -8,6 +8,7 @@ app = Flask(__name__)
 
 
 @app.get("/")
+@app.get("/api/search")
 def search():
     city = request.args.get("city", "")
     state = request.args.get("state", "")

@@ -6,5 +6,6 @@ app = Flask(__name__)
 
 
 @app.get("/")
+@app.get("/api/health")
 def health():
     return {"ok": True}, 200

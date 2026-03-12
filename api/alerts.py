@@ -8,6 +8,7 @@ app = Flask(__name__)
 
 
 @app.get("/")
+@app.get("/api/alerts")
 def alerts():
     force_refresh = request.args.get("refresh", "").lower() == "true"
     try:
