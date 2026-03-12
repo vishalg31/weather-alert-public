@@ -13,7 +13,7 @@ Public weather alert dashboard prepared for Vercel.
 ## Stack
 
 - Static `index.html`
-- Flask serverless API in `api/index.py`
+- Flask serverless API in `api/*.py`
 - NOAA alerts API
 - `uszips.csv` for city/state lookup
 

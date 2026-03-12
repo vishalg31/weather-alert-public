@@ -2,27 +2,12 @@ from __future__ import annotations
 
 from flask import Flask, jsonify, request
 
-from lib.weather_service import fetch_nationwide_alerts, search_city_state
+from lib.weather_service import search_city_state
 
 app = Flask(__name__)
 
 
-@app.get("/health")
-def health() -> tuple[dict, int]:
-    return {"ok": True}, 200
-
-
-@app.get("/alerts")
-def alerts():
-    force_refresh = request.args.get("refresh", "").lower() == "true"
-    try:
-        payload = fetch_nationwide_alerts(force_refresh=force_refresh)
-    except Exception as exc:
-        return jsonify({"error": "Unable to fetch nationwide alerts.", "details": str(exc)}), 502
-    return jsonify(payload)
-
-
-@app.get("/search")
+@app.get("/")
 def search():
     city = request.args.get("city", "")
     state = request.args.get("state", "")
