@@ -560,15 +560,22 @@
             return String(value || "").trim().toUpperCase();
         }
 
+        function stateFromQuery(query) {
+            const upper = normalizeQuery(query);
+            if (!upper) return "";
+            if (STATE_NAMES[upper]) return upper;
+            const exactNameMatch = Object.entries(STATE_NAMES).find(([, name]) => name.toUpperCase() === upper);
+            return exactNameMatch ? exactNameMatch[0] : "";
+        }
+
         function matchesFilter(alert, query) {
             if (!severityFilter[alert.severity]) return false;
             if (!query) return true;
             const upper = normalizeQuery(query);
-            const stateMatch = (alert.states || []).some((state) => {
-                const fullName = STATE_NAMES[state] || "";
-                return state === upper || fullName.toUpperCase() === upper;
-            });
-            if (stateMatch) return true;
+            const exactState = stateFromQuery(upper);
+            if (exactState) {
+                return (alert.states || []).includes(exactState);
+            }
 
             const haystack = [
                 alert.event,
