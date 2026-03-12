@@ -178,6 +178,16 @@
         .badge.orange { background: var(--orange-soft); color: var(--orange); }
         .badge.blue { background: var(--blue-soft); color: var(--blue); }
         .badge.green { background: var(--green-soft); color: var(--green); }
+        .badge.filter-chip {
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .badge.filter-chip.inactive {
+            opacity: 0.55;
+            background: #f5f7fb;
+            color: var(--muted);
+            border-color: var(--line);
+        }
 
         button,
         input {
@@ -430,8 +440,8 @@
 
         <section class="controls">
             <div class="control-group">
-                <span class="badge red">Extreme</span>
-                <span class="badge orange">Severe</span>
+                <button class="badge red filter-chip" id="filter-extreme" type="button">Extreme</button>
+                <button class="badge orange filter-chip" id="filter-severe" type="button">Severe</button>
                 <span class="badge blue">NOAA data</span>
             </div>
             <div class="control-group">
@@ -513,6 +523,8 @@
 
         const refreshButton = document.getElementById("refresh-button");
         const refreshStatus = document.getElementById("refresh-status");
+        const extremeFilterButton = document.getElementById("filter-extreme");
+        const severeFilterButton = document.getElementById("filter-severe");
         const stateStrip = document.getElementById("state-strip");
         const nationwideAlerts = document.getElementById("nationwide-alerts");
         const statAlertCount = document.getElementById("stat-alert-count");
@@ -528,6 +540,7 @@
         let allAlerts = [];
         let allStates = [];
         let activeFilter = "";
+        let severityFilter = { Extreme: true, Severe: true };
 
         function formatTimestamp(value) {
             if (!value) return "-";
@@ -548,6 +561,7 @@
         }
 
         function matchesFilter(alert, query) {
+            if (!severityFilter[alert.severity]) return false;
             if (!query) return true;
             const upper = normalizeQuery(query);
             const stateMatch = (alert.states || []).some((state) => {
@@ -654,9 +668,15 @@
             nationwideAlerts.innerHTML = alerts.map(renderAlertCard).join("");
         }
 
+        function syncSeverityButtons() {
+            extremeFilterButton.classList.toggle("inactive", !severityFilter.Extreme);
+            severeFilterButton.classList.toggle("inactive", !severityFilter.Severe);
+        }
+
         function applyFilter(query) {
             activeFilter = String(query || "").trim();
             const filteredAlerts = allAlerts.filter((alert) => matchesFilter(alert, activeFilter));
+            syncSeverityButtons();
             renderStateStrip(allStates);
             renderNationwideAlerts(filteredAlerts);
             renderResultsSummary(filteredAlerts, activeFilter);
@@ -696,6 +716,20 @@
         }
 
         refreshButton.addEventListener("click", () => loadNationwide(true));
+        extremeFilterButton.addEventListener("click", () => {
+            severityFilter.Extreme = !severityFilter.Extreme;
+            if (!severityFilter.Extreme && !severityFilter.Severe) {
+                severityFilter.Severe = true;
+            }
+            applyFilter(activeFilter);
+        });
+        severeFilterButton.addEventListener("click", () => {
+            severityFilter.Severe = !severityFilter.Severe;
+            if (!severityFilter.Extreme && !severityFilter.Severe) {
+                severityFilter.Extreme = true;
+            }
+            applyFilter(activeFilter);
+        });
 
         searchForm.addEventListener("submit", (event) => {
             event.preventDefault();
@@ -706,9 +740,11 @@
 
         resetButton.addEventListener("click", () => {
             filterInput.value = "";
+            severityFilter = { Extreme: true, Severe: true };
             applyFilter("");
         });
 
+        syncSeverityButtons();
         loadNationwide(false);
         window.setInterval(() => loadNationwide(true), 60 * 60 * 1000);
     </script>
