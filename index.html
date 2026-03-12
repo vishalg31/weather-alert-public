@@ -724,17 +724,17 @@
 
         refreshButton.addEventListener("click", () => loadNationwide(true));
         extremeFilterButton.addEventListener("click", () => {
-            severityFilter.Extreme = !severityFilter.Extreme;
-            if (!severityFilter.Extreme && !severityFilter.Severe) {
-                severityFilter.Severe = true;
-            }
+            const onlyExtremeSelected = severityFilter.Extreme && !severityFilter.Severe;
+            severityFilter = onlyExtremeSelected
+                ? { Extreme: true, Severe: true }
+                : { Extreme: true, Severe: false };
             applyFilter(activeFilter);
         });
         severeFilterButton.addEventListener("click", () => {
-            severityFilter.Severe = !severityFilter.Severe;
-            if (!severityFilter.Extreme && !severityFilter.Severe) {
-                severityFilter.Extreme = true;
-            }
+            const onlySevereSelected = !severityFilter.Extreme && severityFilter.Severe;
+            severityFilter = onlySevereSelected
+                ? { Extreme: true, Severe: true }
+                : { Extreme: false, Severe: true };
             applyFilter(activeFilter);
         });
 
