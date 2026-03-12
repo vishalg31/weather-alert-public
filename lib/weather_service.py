@@ -164,6 +164,7 @@ def _alert_to_summary(feature: dict[str, Any]) -> dict[str, Any]:
         "instruction": (properties.get("instruction") or "").strip(),
         "sender": properties.get("senderName") or "",
         "response": properties.get("response") or "",
+        "references": properties.get("references") or [],
         "onset": _iso_or_empty(properties.get("onset")),
         "effective": _iso_or_empty(properties.get("effective")),
         "expires": _iso_or_empty(properties.get("expires")),
@@ -174,6 +175,40 @@ def _alert_to_summary(feature: dict[str, Any]) -> dict[str, Any]:
         "ends_sort": ends_at.isoformat() if ends_at else "",
         "url": properties.get("@id") or "",
     }
+
+
+def _deduplicate_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not alerts:
+        return alerts
+
+    superseded_ids: set[str] = set()
+    for alert in alerts:
+        for ref in alert.get("references", []) or []:
+            if isinstance(ref, dict):
+                ref_id = ref.get("identifier") or ""
+                if ref_id:
+                    superseded_ids.add(ref_id)
+
+    filtered = [
+        alert for alert in alerts
+        if alert.get("id", "") not in superseded_ids
+    ]
+
+    deduped: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for alert in sorted(
+        filtered,
+        key=lambda item: item.get("effective_sort") or item.get("onset_sort") or "",
+        reverse=True,
+    ):
+        alert_id = alert.get("id", "")
+        if alert_id and alert_id in seen_ids:
+            continue
+        if alert_id:
+            seen_ids.add(alert_id)
+        deduped.append(alert)
+
+    return deduped
 
 
 def _build_session() -> requests.Session:
@@ -253,6 +288,9 @@ def fetch_nationwide_alerts(force_refresh: bool = False) -> dict[str, Any]:
             continue
         summary = _alert_to_summary(feature)
         alerts.append(summary)
+
+    alerts = _deduplicate_alerts(alerts)
+    for summary in alerts:
         for state_code in summary["states"]:
             state_counts[state_code] += 1
 
@@ -310,6 +348,7 @@ def search_city_state(city: str, state: str) -> dict[str, Any]:
             continue
         matches.append(_alert_to_summary(feature))
 
+    matches = _deduplicate_alerts(matches)
     matches.sort(
         key=lambda item: (
             item["severity"] != "Extreme",
