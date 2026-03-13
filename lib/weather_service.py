@@ -135,6 +135,13 @@ def _is_active(properties: dict[str, Any]) -> bool:
     return True
 
 
+def _onset_status(onset: datetime | None, effective: datetime | None) -> str:
+    start_time = onset or effective
+    if start_time is None:
+        return "ACTIVE"
+    return "UPCOMING" if start_time > _utc_now() else "ACTIVE"
+
+
 def _extract_states(properties: dict[str, Any]) -> list[str]:
     geocode = properties.get("geocode") or {}
     states: set[str] = set()
@@ -151,6 +158,7 @@ def _alert_to_summary(feature: dict[str, Any]) -> dict[str, Any]:
     effective = _parse_timestamp(properties.get("effective"))
     expires_at = _parse_timestamp(properties.get("expires"))
     ends_at = _parse_timestamp(properties.get("ends"))
+    onset_status = _onset_status(onset, effective)
     area_desc = (properties.get("areaDesc") or "").strip()
     areas = [part.strip() for part in area_desc.split(";") if part.strip()]
     return {
@@ -165,6 +173,7 @@ def _alert_to_summary(feature: dict[str, Any]) -> dict[str, Any]:
         "sender": properties.get("senderName") or "",
         "response": properties.get("response") or "",
         "references": properties.get("references") or [],
+        "onset_status": onset_status,
         "onset": _iso_or_empty(properties.get("onset")),
         "effective": _iso_or_empty(properties.get("effective")),
         "expires": _iso_or_empty(properties.get("expires")),

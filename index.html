@@ -241,7 +241,7 @@
         .search-form {
             margin-top: 18px;
             display: grid;
-            grid-template-columns: 1fr auto auto;
+            grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.9fr) minmax(160px, 0.8fr) auto auto;
             gap: 12px;
         }
 
@@ -259,7 +259,8 @@
             letter-spacing: 0.06em;
         }
 
-        .field input {
+        .field input,
+        .field select {
             border: 1px solid var(--line);
             background: #fbfcff;
             border-radius: 14px;
@@ -267,7 +268,8 @@
             outline: none;
         }
 
-        .field input:focus {
+        .field input:focus,
+        .field select:focus {
             border-color: #9eb6ff;
             box-shadow: 0 0 0 3px rgba(22, 71, 214, 0.12);
         }
@@ -456,7 +458,7 @@
                     <h2>Filter by City or State</h2>
                     <p>
                         Use one search box to filter the active alert dashboard by city name, 2-letter state code,
-                        or full state name. Example: `Dallas`, `TX`, or `Texas`.
+                        or full state name. You can also narrow by alert type and onset status.
                     </p>
                 </div>
             </div>
@@ -465,6 +467,20 @@
                 <div class="field">
                     <label for="filter-input">City or State</label>
                     <input id="filter-input" name="query" type="text" placeholder="Dallas, TX, or Texas">
+                </div>
+                <div class="field">
+                    <label for="event-filter">Alert Type</label>
+                    <select id="event-filter" name="event">
+                        <option value="">All alert types</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="onset-filter">Onset Status</label>
+                    <select id="onset-filter" name="onset_status">
+                        <option value="">All onset states</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="UPCOMING">Upcoming</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>&nbsp;</label>
@@ -537,6 +553,8 @@
         const searchStatus = document.getElementById("search-status");
         const searchContent = document.getElementById("search-content");
         const filterInput = document.getElementById("filter-input");
+        const eventFilter = document.getElementById("event-filter");
+        const onsetFilter = document.getElementById("onset-filter");
         let allAlerts = [];
         let allStates = [];
         let activeFilter = "";
@@ -570,6 +588,8 @@
 
         function matchesFilter(alert, query) {
             if (!severityFilter[alert.severity]) return false;
+            if (eventFilter.value && alert.event !== eventFilter.value) return false;
+            if (onsetFilter.value && alert.onset_status !== onsetFilter.value) return false;
             if (!query) return true;
             const upper = normalizeQuery(query);
             const exactState = stateFromQuery(upper);
@@ -591,8 +611,18 @@
 
         function renderResultsSummary(filteredAlerts, query) {
             searchResults.classList.remove("hidden");
+            const summaryBits = [];
+            if (query) summaryBits.push(`text "${query}"`);
+            if (eventFilter.value) summaryBits.push(`alert type "${eventFilter.value}"`);
+            if (onsetFilter.value) summaryBits.push(`onset "${onsetFilter.value}"`);
+            const filterSummary = summaryBits.join(", ");
+
             if (!query) {
-                searchStatus.textContent = "No filter applied. Showing all active alerts.";
+                if (!filterSummary) {
+                    searchStatus.textContent = "No filter applied. Showing all active alerts.";
+                } else {
+                    searchStatus.textContent = `Showing all active alerts filtered by ${filterSummary}.`;
+                }
                 searchContent.innerHTML = `
                     <div class="search-summary">
                         <div class="badge blue">All active alerts</div>
@@ -603,25 +633,35 @@
             }
 
             if (!filteredAlerts.length) {
-                searchStatus.textContent = `No active severe or extreme alerts matched "${query}".`;
+                searchStatus.textContent = `No active severe or extreme alerts matched ${filterSummary || "the current filters"}.`;
                 searchContent.innerHTML = `
                     <div class="search-summary">
                         <div class="badge green">No matches</div>
-                        <div class="alert-meta"><strong>Filter:</strong> ${escapeHtml(query)}</div>
+                        <div class="alert-meta"><strong>Filters:</strong> ${escapeHtml(filterSummary || "None")}</div>
                     </div>
                 `;
                 return;
             }
 
-            searchStatus.textContent = `${filteredAlerts.length} active alert(s) matched "${query}".`;
+            searchStatus.textContent = `${filteredAlerts.length} active alert(s) matched ${filterSummary || "the current filters"}.`;
             searchContent.innerHTML = `
                 <div class="search-summary">
                     <div class="badge ${filteredAlerts.some((item) => item.severity === "Extreme") ? "red" : "orange"}">
                         ${filteredAlerts.length} active alert(s)
                     </div>
-                    <div class="alert-meta"><strong>Filter:</strong> ${escapeHtml(query)}</div>
+                    <div class="alert-meta"><strong>Filters:</strong> ${escapeHtml(filterSummary || "None")}</div>
                 </div>
             `;
+        }
+
+        function populateEventFilter(alerts) {
+            const events = [...new Set(alerts.map((alert) => alert.event).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+            const selected = eventFilter.value;
+            eventFilter.innerHTML = "<option value=\"\">All alert types</option>" +
+                events.map((event) => `<option value="${escapeHtml(event)}">${escapeHtml(event)}</option>`).join("");
+            if (events.includes(selected)) {
+                eventFilter.value = selected;
+            }
         }
 
         function renderStateStrip(states) {
@@ -660,6 +700,7 @@
                     <h3 class="alert-title">${escapeHtml(alert.event)}</h3>
                     <div class="alert-meta"><strong>Headline:</strong> ${escapeHtml(alert.headline || "No headline provided")}</div>
                     <div class="alert-areas"><strong>Areas:</strong> ${escapeHtml(areas)}</div>
+                    <div class="alert-meta"><strong>Onset Status:</strong> ${escapeHtml(alert.onset_status || "ACTIVE")}</div>
                     <div class="alert-meta"><strong>Effective:</strong> ${escapeHtml(formatTimestamp(alert.effective || alert.onset))}</div>
                     <div class="alert-meta"><strong>Expires:</strong> ${escapeHtml(formatTimestamp(alert.expires || alert.ends))}</div>
                     ${instruction}
@@ -705,6 +746,7 @@
                 refreshStatus.textContent = `Last refreshed ${formatTimestamp(data.generated_at)}`;
                 allAlerts = data.alerts || [];
                 allStates = data.states || [];
+                populateEventFilter(allAlerts);
 
                 if (!allAlerts.length) {
                     renderStateStrip(allStates);
@@ -745,8 +787,13 @@
             searchButton.disabled = false;
         });
 
+        eventFilter.addEventListener("change", () => applyFilter(filterInput.value));
+        onsetFilter.addEventListener("change", () => applyFilter(filterInput.value));
+
         resetButton.addEventListener("click", () => {
             filterInput.value = "";
+            eventFilter.value = "";
+            onsetFilter.value = "";
             severityFilter = { Extreme: true, Severe: true };
             applyFilter("");
         });
