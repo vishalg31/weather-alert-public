@@ -53,20 +53,19 @@
         }
 
         .hero-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 18px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+            gap: 14px 18px;
             align-items: center;
-            flex-wrap: wrap;
         }
 
         .eyebrow {
             display: inline-block;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
             color: #adc4ff;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             font-weight: 700;
         }
 
@@ -77,8 +76,8 @@
         }
 
         .hero-copy {
-            flex: 1 1 460px;
-            max-width: 720px;
+            min-width: 0;
+            max-width: 100%;
         }
 
         .hero-copy p {
@@ -89,27 +88,25 @@
             font-size: 0.96rem;
         }
 
-        .hero-meta {
-            min-width: 280px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: 18px;
-            padding: 14px 16px;
+        .hero-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .hero-meta strong {
-            display: block;
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #b7c8f6;
-            margin-bottom: 8px;
+        .refresh-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
         }
 
-        .hero-meta p {
-            margin: 0;
-            color: #fff;
-            line-height: 1.6;
+        .refresh-note {
+            color: #d5def8;
+            font-size: 0.86rem;
+            line-height: 1.4;
         }
 
         .stats {
@@ -346,16 +343,20 @@
         }
 
         .search-summary {
-            margin-top: 14px;
-            padding: 14px 16px;
-            border-radius: 16px;
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 14px;
             background: var(--panel-alt);
             border: 1px solid #d7e3ff;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
+        }
+
+        .search-summary strong {
+            display: none;
         }
 
         .alert-grid {
@@ -496,16 +497,31 @@
             transform: translateY(-2px);
         }
 
-        .dashboard-grid {
+        .overview-grid {
             display: grid;
-            grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
             gap: 18px;
             align-items: start;
+            margin-top: 16px;
         }
 
-        .dashboard-side,
-        .dashboard-main {
-            min-width: 0;
+        .states-panel {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 16px;
+            background: linear-gradient(180deg, #fbfcff 0%, #f6f9ff 100%);
+        }
+
+        .states-panel h3 {
+            margin: 0 0 6px;
+            font-size: 1.05rem;
+        }
+
+        .states-panel p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
         }
 
         @media (max-width: 960px) {
@@ -513,11 +529,21 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
+            .hero-top {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-actions,
+            .refresh-stack {
+                justify-content: flex-start;
+                align-items: flex-start;
+            }
+
             .search-form {
                 grid-template-columns: 1fr;
             }
 
-            .dashboard-grid {
+            .overview-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -547,12 +573,14 @@
                     <h1>Severe and extreme alerts, nationwide.</h1>
                     <p>
                         This public dashboard shows active NOAA alert regions and affected states for
-                        `Severe` and `Extreme` conditions, with a simple filter for city names or states.
+                        `Severe` and `Extreme` conditions, with compact filtering across location, alert type, onset status, and severity.
                     </p>
                 </div>
-                <div class="hero-meta">
-                    <strong>Refresh model</strong>
-                    <p>Manual refresh is always available. The page also auto-refreshes every hour while open.</p>
+                <div class="hero-actions">
+                    <div class="refresh-stack">
+                        <button class="button button-primary" id="header-refresh-button" type="button">Refresh Nationwide Data</button>
+                        <div class="refresh-note">Manual refresh is always available. The dashboard also refreshes automatically every hour.</div>
+                    </div>
                 </div>
             </div>
             <div class="stats">
@@ -586,7 +614,6 @@
                 <span class="badge blue">NOAA data</span>
             </div>
             <div class="control-group">
-                <button class="button button-primary" id="refresh-button" type="button">Refresh Nationwide Data</button>
                 <span class="status-line" id="refresh-status">Loading current alert snapshot...</span>
             </div>
         </section>
@@ -632,7 +659,6 @@
             </form>
             <div class="search-summary" id="search-summary">
                 <div>
-                    <strong>Current View</strong>
                     <div class="alert-meta" id="search-status">No filter applied. Showing all active alerts.</div>
                 </div>
                 <div class="badge blue" id="summary-count">0 visible alerts</div>
@@ -649,27 +675,28 @@
                     </p>
                 </div>
             </div>
-            <div class="dashboard-grid">
-                <div class="dashboard-side">
-                    <div class="map-panel">
-                        <div class="map-panel-head">
-                            <div>
-                                <h3>Affected State Map</h3>
-                                <p>Hover to see the alert count. Click a state to apply the same filter as the state chips below.</p>
-                            </div>
-                            <div class="map-legend">
-                                <span><span class="legend-swatch legend-low"></span> Low</span>
-                                <span><span class="legend-swatch legend-mid"></span> Medium</span>
-                                <span><span class="legend-swatch legend-high"></span> High</span>
-                            </div>
+            <div class="overview-grid">
+                <div class="map-panel">
+                    <div class="map-panel-head">
+                        <div>
+                            <h3>Affected State Map</h3>
+                            <p>Hover to see the alert count. Click a state to apply the same filter as the state list.</p>
                         </div>
-                        <div id="state-map"></div>
+                        <div class="map-legend">
+                            <span><span class="legend-swatch legend-low"></span> Low</span>
+                            <span><span class="legend-swatch legend-mid"></span> Medium</span>
+                            <span><span class="legend-swatch legend-high"></span> High</span>
+                        </div>
                     </div>
+                    <div id="state-map"></div>
+                </div>
+                <div class="states-panel">
+                    <h3>Affected States</h3>
+                    <p>Click a state chip to focus the dashboard on that state.</p>
                     <div class="state-strip" id="state-strip"></div>
                 </div>
-                <div class="dashboard-main">
-                    <div class="alert-grid" id="nationwide-alerts"></div>
-                </div>
+            </div>
+            <div class="alert-grid" id="nationwide-alerts"></div>
             </div>
             <p class="footnote">
                 Notes: nationwide cards represent active alert regions from NOAA. Use the map, state chips, severity filters,
@@ -677,9 +704,7 @@
             </p>
         </section>
     </div>
-    <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" title="Back to top">
-        ☁
-    </button>
+    <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" title="Back to top">&#9729;</button>
 
     <script>
         const STATE_NAMES = {
@@ -696,7 +721,7 @@
             WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming"
         };
 
-        const refreshButton = document.getElementById("refresh-button");
+        const refreshButton = document.getElementById("header-refresh-button");
         const refreshStatus = document.getElementById("refresh-status");
         const extremeFilterButton = document.getElementById("filter-extreme");
         const severeFilterButton = document.getElementById("filter-severe");
