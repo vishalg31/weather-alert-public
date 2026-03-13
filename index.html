@@ -773,6 +773,25 @@
             const values = states.map((item) => item.active_alerts);
             const names = states.map((item) => STATE_NAMES[item.state] || item.state);
             const customData = states.map((item) => [STATE_NAMES[item.state] || item.state, item.active_alerts]);
+            const onlyExtremeSelected = severityFilter.Extreme && !severityFilter.Severe;
+            const onlySevereSelected = !severityFilter.Extreme && severityFilter.Severe;
+            const baseScale = onlyExtremeSelected
+                ? [
+                    [0, "#fee2e2"],
+                    [0.5, "#f87171"],
+                    [1, "#d92d20"]
+                ]
+                : onlySevereSelected
+                    ? [
+                        [0, "#ffedd5"],
+                        [0.5, "#fb923c"],
+                        [1, "#f97316"]
+                    ]
+                    : [
+                        [0, "#dbeafe"],
+                        [0.5, "#60a5fa"],
+                        [1, "#1d4ed8"]
+                    ];
 
             const traces = [
                 {
@@ -783,11 +802,7 @@
                     zmin: 1,
                     zmax: Math.max(...values),
                     customdata: customData,
-                    colorscale: [
-                        [0, "#dbeafe"],
-                        [0.5, "#60a5fa"],
-                        [1, "#1d4ed8"]
-                    ],
+                    colorscale: baseScale,
                     marker: {
                         line: {
                             color: "#ffffff",
