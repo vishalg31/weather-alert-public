@@ -220,6 +220,23 @@ def _deduplicate_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return deduped
 
 
+def _sort_alerts(alerts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def sort_key(item: dict[str, Any]) -> tuple[int, str, str]:
+        severity_rank = 0 if item.get("severity") == "Extreme" else 1
+        onset_status = item.get("onset_status") or "ACTIVE"
+        if onset_status == "UPCOMING":
+            # Soonest upcoming alerts should surface first.
+            time_key = item.get("onset_sort") or item.get("effective_sort") or "9999"
+            status_rank = 1
+        else:
+            # Active alerts keep their prior ordering by effective/onset time.
+            time_key = item.get("effective_sort") or item.get("onset_sort") or ""
+            status_rank = 0
+        return (severity_rank, status_rank, time_key)
+
+    return sorted(alerts, key=sort_key)
+
+
 def _build_session() -> requests.Session:
     session = requests.Session()
     session.headers.update(
@@ -303,12 +320,7 @@ def fetch_nationwide_alerts(force_refresh: bool = False) -> dict[str, Any]:
         for state_code in summary["states"]:
             state_counts[state_code] += 1
 
-    alerts.sort(
-        key=lambda item: (
-            item["severity"] != "Extreme",
-            item["effective_sort"] or item["onset_sort"] or "",
-        )
-    )
+    alerts = _sort_alerts(alerts)
     now = _utc_now().isoformat()
     nationwide = {
         "generated_at": now,
@@ -358,12 +370,7 @@ def search_city_state(city: str, state: str) -> dict[str, Any]:
         matches.append(_alert_to_summary(feature))
 
     matches = _deduplicate_alerts(matches)
-    matches.sort(
-        key=lambda item: (
-            item["severity"] != "Extreme",
-            item["effective_sort"] or item["onset_sort"] or "",
-        )
-    )
+    matches = _sort_alerts(matches)
     return {
         "generated_at": _utc_now().isoformat(),
         "query": {
