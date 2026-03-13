@@ -734,6 +734,21 @@
             }
         }
 
+        function buildStateCountsFromAlerts(alerts) {
+            const counts = new Map();
+            alerts.forEach((alert) => {
+                (alert.states || []).forEach((state) => {
+                    counts.set(state, (counts.get(state) || 0) + 1);
+                });
+            });
+            return [...counts.entries()]
+                .map(([state, active_alerts]) => ({ state, active_alerts }))
+                .sort((a, b) => {
+                    if (b.active_alerts !== a.active_alerts) return b.active_alerts - a.active_alerts;
+                    return a.state.localeCompare(b.state);
+                });
+        }
+
         function renderStateStrip(states) {
             if (!states.length) {
                 stateStrip.innerHTML = "<div class=\"empty\">No states currently flagged with severe or extreme active alerts.</div>";
@@ -914,8 +929,9 @@
             activeFilter = String(query || "").trim();
             const filteredAlerts = allAlerts.filter((alert) => matchesFilter(alert, activeFilter));
             syncSeverityButtons();
-            renderStateMap(allStates);
-            renderStateStrip(allStates);
+            const filteredStates = buildStateCountsFromAlerts(filteredAlerts);
+            renderStateMap(filteredStates);
+            renderStateStrip(filteredStates);
             renderNationwideAlerts(filteredAlerts);
             renderResultsSummary(filteredAlerts, activeFilter);
         }
@@ -939,7 +955,8 @@
                 populateEventFilter(allAlerts);
 
                 if (!allAlerts.length) {
-                    renderStateStrip(allStates);
+                    renderStateMap([]);
+                    renderStateStrip([]);
                     nationwideAlerts.innerHTML = "<div class=\"empty\">No active severe or extreme alerts were returned by NOAA.</div>";
                     searchResults.classList.add("hidden");
                 } else {
