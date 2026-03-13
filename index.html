@@ -47,16 +47,16 @@
         .hero {
             background: linear-gradient(135deg, #12213f 0%, #18315f 56%, #1647d6 100%);
             color: #fff;
-            border-radius: 28px;
-            padding: 24px 26px;
+            border-radius: 24px;
+            padding: 18px 20px;
             box-shadow: var(--shadow);
         }
 
         .hero-top {
             display: flex;
             justify-content: space-between;
-            gap: 24px;
-            align-items: flex-start;
+            gap: 18px;
+            align-items: center;
             flex-wrap: wrap;
         }
 
@@ -72,19 +72,21 @@
 
         h1 {
             margin: 0;
-            font-size: clamp(2.1rem, 5vw, 3.9rem);
-            line-height: 1;
+            font-size: clamp(1.5rem, 3vw, 2.2rem);
+            line-height: 1.05;
         }
 
         .hero-copy {
-            max-width: 760px;
+            flex: 1 1 460px;
+            max-width: 720px;
         }
 
         .hero-copy p {
-            margin: 14px 0 0;
+            margin: 6px 0 0;
             color: #d5def8;
-            max-width: 680px;
-            line-height: 1.7;
+            max-width: 760px;
+            line-height: 1.5;
+            font-size: 0.96rem;
         }
 
         .hero-meta {
@@ -92,7 +94,7 @@
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.14);
             border-radius: 18px;
-            padding: 18px;
+            padding: 14px 16px;
         }
 
         .hero-meta strong {
@@ -113,15 +115,15 @@
         .stats {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 14px;
         }
 
         .stat {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 18px;
-            padding: 18px;
+            padding: 14px 16px;
         }
 
         .stat-label {
@@ -133,9 +135,16 @@
         }
 
         .stat-value {
-            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            font-size: clamp(1.35rem, 3vw, 1.9rem);
             font-weight: 800;
             line-height: 1;
+        }
+
+        .stat-note {
+            margin-top: 8px;
+            color: #d5def8;
+            font-size: 0.8rem;
+            line-height: 1.4;
         }
 
         .controls,
@@ -483,7 +492,7 @@
 
         @media (max-width: 640px) {
             .page { padding: 20px 14px 40px; }
-            .hero { padding: 20px 18px; border-radius: 22px; }
+            .hero { padding: 16px 16px; border-radius: 22px; }
             .stats { grid-template-columns: 1fr; }
             .controls,
             .search-panel,
@@ -510,20 +519,24 @@
             </div>
             <div class="stats">
                 <div class="stat">
-                    <div class="stat-label">Active Alerts</div>
+                    <div class="stat-label">Visible Alerts</div>
                     <div class="stat-value" id="stat-alert-count">-</div>
+                    <div class="stat-note" id="stat-alert-note">Current dashboard view</div>
                 </div>
                 <div class="stat">
                     <div class="stat-label">States Affected</div>
                     <div class="stat-value" id="stat-state-count">-</div>
+                    <div class="stat-note" id="stat-state-note">States in current view</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-label">Last Updated</div>
-                    <div class="stat-value" id="stat-updated">-</div>
+                    <div class="stat-label">Extreme / Severe</div>
+                    <div class="stat-value" id="stat-severity-split">-</div>
+                    <div class="stat-note" id="stat-severity-note">Severity mix in current view</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-label">Auto Refresh</div>
-                    <div class="stat-value">1 hr</div>
+                    <div class="stat-label">Active / Upcoming</div>
+                    <div class="stat-value" id="stat-onset-split">-</div>
+                    <div class="stat-note" id="stat-onset-note">Onset status in current view</div>
                 </div>
             </div>
         </section>
@@ -651,7 +664,12 @@
         const nationwideAlerts = document.getElementById("nationwide-alerts");
         const statAlertCount = document.getElementById("stat-alert-count");
         const statStateCount = document.getElementById("stat-state-count");
-        const statUpdated = document.getElementById("stat-updated");
+        const statSeveritySplit = document.getElementById("stat-severity-split");
+        const statOnsetSplit = document.getElementById("stat-onset-split");
+        const statAlertNote = document.getElementById("stat-alert-note");
+        const statStateNote = document.getElementById("stat-state-note");
+        const statSeverityNote = document.getElementById("stat-severity-note");
+        const statOnsetNote = document.getElementById("stat-onset-note");
         const searchForm = document.getElementById("search-form");
         const searchButton = document.getElementById("search-button");
         const resetButton = document.getElementById("reset-button");
@@ -663,6 +681,7 @@
         let allAlerts = [];
         let allStates = [];
         let activeFilter = "";
+        let lastGeneratedAt = "";
         let severityFilter = { Extreme: true, Severe: true };
 
         function formatTimestamp(value) {
@@ -968,6 +987,35 @@
             nationwideAlerts.innerHTML = alerts.map(renderAlertCard).join("");
         }
 
+        function updateTopStats(filteredAlerts) {
+            const stateCount = new Set(
+                filteredAlerts.flatMap((alert) => alert.states || [])
+            ).size;
+            const extremeCount = filteredAlerts.filter((alert) => alert.severity === "Extreme").length;
+            const severeCount = filteredAlerts.filter((alert) => alert.severity === "Severe").length;
+            const activeCount = filteredAlerts.filter((alert) => alert.onset_status === "ACTIVE").length;
+            const upcomingCount = filteredAlerts.filter((alert) => alert.onset_status === "UPCOMING").length;
+
+            statAlertCount.textContent = filteredAlerts.length;
+            statStateCount.textContent = stateCount;
+            statSeveritySplit.textContent = `${extremeCount} / ${severeCount}`;
+            statOnsetSplit.textContent = `${activeCount} / ${upcomingCount}`;
+
+            const summaryBits = [];
+            if (activeFilter) summaryBits.push(activeFilter);
+            if (eventFilter.value) summaryBits.push(eventFilter.value);
+            if (onsetFilter.value) summaryBits.push(onsetFilter.value);
+            if (severityFilter.Extreme && !severityFilter.Severe) summaryBits.push("Extreme only");
+            if (!severityFilter.Extreme && severityFilter.Severe) summaryBits.push("Severe only");
+            const summaryText = summaryBits.length ? `Filtered by ${summaryBits.join(" | ")}` : "No filters applied";
+
+            statAlertNote.textContent = summaryText;
+            statStateNote.textContent = "States represented in the visible alerts";
+            statSeverityNote.textContent = "Extreme / Severe in the visible alerts";
+            statOnsetNote.textContent = "Active / Upcoming in the visible alerts";
+            refreshStatus.textContent = `Last refreshed ${formatTimestamp(lastGeneratedAt)} | ${summaryText}`;
+        }
+
         function syncSeverityButtons() {
             extremeFilterButton.classList.toggle("inactive", !severityFilter.Extreme);
             severeFilterButton.classList.toggle("inactive", !severityFilter.Severe);
@@ -978,6 +1026,7 @@
             const filteredAlerts = allAlerts.filter((alert) => matchesFilter(alert, activeFilter));
             syncSeverityButtons();
             const filteredStates = buildStateCountsFromAlerts(filteredAlerts);
+            updateTopStats(filteredAlerts);
             renderStateMap(filteredStates);
             renderStateStrip(filteredStates);
             renderNationwideAlerts(filteredAlerts);
@@ -994,15 +1043,13 @@
                     throw new Error(data.error || "Unable to load nationwide alerts.");
                 }
 
-                statAlertCount.textContent = data.alert_count;
-                statStateCount.textContent = data.state_count;
-                statUpdated.textContent = formatTimestamp(data.generated_at);
-                refreshStatus.textContent = `Last refreshed ${formatTimestamp(data.generated_at)}`;
+                lastGeneratedAt = data.generated_at || "";
                 allAlerts = data.alerts || [];
                 allStates = data.states || [];
                 populateEventFilter(allAlerts);
 
                 if (!allAlerts.length) {
+                    updateTopStats([]);
                     renderStateMap([]);
                     renderStateStrip([]);
                     nationwideAlerts.innerHTML = "<div class=\"empty\">No active severe or extreme alerts were returned by NOAA.</div>";
