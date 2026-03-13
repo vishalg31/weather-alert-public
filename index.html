@@ -48,7 +48,7 @@
             background: linear-gradient(135deg, #12213f 0%, #18315f 56%, #1647d6 100%);
             color: #fff;
             border-radius: 28px;
-            padding: 32px;
+            padding: 24px 26px;
             box-shadow: var(--shadow);
         }
 
@@ -114,7 +114,7 @@
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 16px;
-            margin-top: 28px;
+            margin-top: 20px;
         }
 
         .stat {
@@ -140,9 +140,8 @@
 
         .controls,
         .search-panel,
-        .results,
         .nationwide {
-            margin-top: 22px;
+            margin-top: 18px;
             background: var(--panel);
             border-radius: 22px;
             box-shadow: var(--shadow);
@@ -216,7 +215,7 @@
         }
 
         .search-panel {
-            padding: 22px;
+            padding: 18px 20px;
         }
 
         .panel-head {
@@ -240,7 +239,7 @@
         }
 
         .search-form {
-            margin-top: 18px;
+            margin-top: 14px;
             display: grid;
             grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.9fr) minmax(160px, 0.8fr) auto auto;
             gap: 12px;
@@ -275,13 +274,11 @@
             box-shadow: 0 0 0 3px rgba(22, 71, 214, 0.12);
         }
 
-        .results,
         .nationwide {
             padding: 22px;
         }
 
         .map-panel {
-            margin-top: 18px;
             border: 1px solid var(--line);
             border-radius: 18px;
             overflow: hidden;
@@ -331,11 +328,7 @@
 
         #state-map {
             width: 100%;
-            min-height: 420px;
-        }
-
-        .results.hidden {
-            display: none;
+            min-height: 360px;
         }
 
         .status-line {
@@ -344,14 +337,18 @@
         }
 
         .search-summary {
-            margin-top: 18px;
-            padding: 16px;
+            margin-top: 14px;
+            padding: 14px 16px;
             border-radius: 16px;
             background: var(--panel-alt);
             border: 1px solid #d7e3ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .search-alerts,
         .alert-grid {
             display: grid;
             gap: 16px;
@@ -458,6 +455,18 @@
             line-height: 1.6;
         }
 
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .dashboard-side,
+        .dashboard-main {
+            min-width: 0;
+        }
+
         @media (max-width: 960px) {
             .stats {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -466,15 +475,18 @@
             .search-form {
                 grid-template-columns: 1fr;
             }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 640px) {
             .page { padding: 20px 14px 40px; }
-            .hero { padding: 24px 20px; border-radius: 22px; }
+            .hero { padding: 20px 18px; border-radius: 22px; }
             .stats { grid-template-columns: 1fr; }
             .controls,
             .search-panel,
-            .results,
             .nationwide { padding: 18px; border-radius: 18px; }
         }
     </style>
@@ -567,16 +579,13 @@
                     <button class="button button-ghost" id="reset-button" type="button">Reset Filter</button>
                 </div>
             </form>
-        </section>
-
-        <section class="results hidden" id="search-results">
-            <div class="panel-head">
+            <div class="search-summary" id="search-summary">
                 <div>
-                    <h2>Search Result</h2>
-                    <p id="search-status">No filter applied yet.</p>
+                    <strong>Current View</strong>
+                    <div class="alert-meta" id="search-status">No filter applied. Showing all active alerts.</div>
                 </div>
+                <div class="badge blue" id="summary-count">0 visible alerts</div>
             </div>
-            <div id="search-content"></div>
         </section>
 
         <section class="nationwide">
@@ -589,25 +598,31 @@
                     </p>
                 </div>
             </div>
-            <div class="map-panel">
-                <div class="map-panel-head">
-                    <div>
-                        <h3>Affected State Map</h3>
-                        <p>Hover to see the alert count. Click a state to apply the same filter as the state chips below.</p>
+            <div class="dashboard-grid">
+                <div class="dashboard-side">
+                    <div class="map-panel">
+                        <div class="map-panel-head">
+                            <div>
+                                <h3>Affected State Map</h3>
+                                <p>Hover to see the alert count. Click a state to apply the same filter as the state chips below.</p>
+                            </div>
+                            <div class="map-legend">
+                                <span><span class="legend-swatch legend-low"></span> Low</span>
+                                <span><span class="legend-swatch legend-mid"></span> Medium</span>
+                                <span><span class="legend-swatch legend-high"></span> High</span>
+                            </div>
+                        </div>
+                        <div id="state-map"></div>
                     </div>
-                    <div class="map-legend">
-                        <span><span class="legend-swatch legend-low"></span> Low</span>
-                        <span><span class="legend-swatch legend-mid"></span> Medium</span>
-                        <span><span class="legend-swatch legend-high"></span> High</span>
-                    </div>
+                    <div class="state-strip" id="state-strip"></div>
                 </div>
-                <div id="state-map"></div>
+                <div class="dashboard-main">
+                    <div class="alert-grid" id="nationwide-alerts"></div>
+                </div>
             </div>
-            <div class="state-strip" id="state-strip"></div>
-            <div class="alert-grid" id="nationwide-alerts"></div>
             <p class="footnote">
-                Notes: nationwide cards represent active alert regions from NOAA. Use the state chips or filter box
-                to narrow the list instantly.
+                Notes: nationwide cards represent active alert regions from NOAA. Use the map, state chips, severity filters,
+                or filter row to narrow the list instantly.
             </p>
         </section>
     </div>
@@ -640,9 +655,8 @@
         const searchForm = document.getElementById("search-form");
         const searchButton = document.getElementById("search-button");
         const resetButton = document.getElementById("reset-button");
-        const searchResults = document.getElementById("search-results");
         const searchStatus = document.getElementById("search-status");
-        const searchContent = document.getElementById("search-content");
+        const summaryCount = document.getElementById("summary-count");
         const filterInput = document.getElementById("filter-input");
         const eventFilter = document.getElementById("event-filter");
         const onsetFilter = document.getElementById("onset-filter");
@@ -730,7 +744,6 @@
         }
 
         function renderResultsSummary(filteredAlerts, query) {
-            searchResults.classList.remove("hidden");
             const summaryBits = [];
             if (query) summaryBits.push(`text "${query}"`);
             if (eventFilter.value) summaryBits.push(`alert type "${eventFilter.value}"`);
@@ -743,35 +756,18 @@
                 } else {
                     searchStatus.textContent = `Showing all active alerts filtered by ${filterSummary}.`;
                 }
-                searchContent.innerHTML = `
-                    <div class="search-summary">
-                        <div class="badge blue">All active alerts</div>
-                        <div class="alert-meta"><strong>Visible alerts:</strong> ${filteredAlerts.length}</div>
-                    </div>
-                `;
+                summaryCount.textContent = `${filteredAlerts.length} visible alerts`;
                 return;
             }
 
             if (!filteredAlerts.length) {
                 searchStatus.textContent = `No active severe or extreme alerts matched ${filterSummary || "the current filters"}.`;
-                searchContent.innerHTML = `
-                    <div class="search-summary">
-                        <div class="badge green">No matches</div>
-                        <div class="alert-meta"><strong>Filters:</strong> ${escapeHtml(filterSummary || "None")}</div>
-                    </div>
-                `;
+                summaryCount.textContent = "No matches";
                 return;
             }
 
             searchStatus.textContent = `${filteredAlerts.length} active alert(s) matched ${filterSummary || "the current filters"}.`;
-            searchContent.innerHTML = `
-                <div class="search-summary">
-                    <div class="badge ${filteredAlerts.some((item) => item.severity === "Extreme") ? "red" : "orange"}">
-                        ${filteredAlerts.length} active alert(s)
-                    </div>
-                    <div class="alert-meta"><strong>Filters:</strong> ${escapeHtml(filterSummary || "None")}</div>
-                </div>
-            `;
+            summaryCount.textContent = `${filteredAlerts.length} active alerts`;
         }
 
         function populateEventFilter(alerts) {
@@ -1010,7 +1006,8 @@
                     renderStateMap([]);
                     renderStateStrip([]);
                     nationwideAlerts.innerHTML = "<div class=\"empty\">No active severe or extreme alerts were returned by NOAA.</div>";
-                    searchResults.classList.add("hidden");
+                    summaryCount.textContent = "0 visible alerts";
+                    searchStatus.textContent = "No active severe or extreme alerts were returned by NOAA.";
                 } else {
                     applyFilter(activeFilter);
                 }
