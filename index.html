@@ -464,6 +464,38 @@
             line-height: 1.6;
         }
 
+        .back-to-top {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            width: 52px;
+            height: 52px;
+            border: 0;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1647d6 0%, #60a5fa 100%);
+            color: #fff;
+            box-shadow: 0 14px 30px rgba(22, 71, 214, 0.22);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 50;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+        }
+
         .dashboard-grid {
             display: grid;
             grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
@@ -497,6 +529,12 @@
             .controls,
             .search-panel,
             .nationwide { padding: 18px; border-radius: 18px; }
+            .back-to-top {
+                right: 16px;
+                bottom: 16px;
+                width: 48px;
+                height: 48px;
+            }
         }
     </style>
 </head>
@@ -639,6 +677,9 @@
             </p>
         </section>
     </div>
+    <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" title="Back to top">
+        ☁
+    </button>
 
     <script>
         const STATE_NAMES = {
@@ -673,6 +714,7 @@
         const searchForm = document.getElementById("search-form");
         const searchButton = document.getElementById("search-button");
         const resetButton = document.getElementById("reset-button");
+        const backToTopButton = document.getElementById("back-to-top");
         const searchStatus = document.getElementById("search-status");
         const summaryCount = document.getElementById("summary-count");
         const filterInput = document.getElementById("filter-input");
@@ -1099,6 +1141,14 @@
             onsetFilter.value = "";
             severityFilter = { Extreme: true, Severe: true };
             applyFilter("");
+        });
+
+        backToTopButton.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        window.addEventListener("scroll", () => {
+            backToTopButton.classList.toggle("visible", window.scrollY > 520);
         });
 
         syncSeverityButtons();
