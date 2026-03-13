@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Alert Monitor</title>
     <meta name="description" content="Nationwide severe and extreme weather alert dashboard with city and state search.">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <style>
         :root {
             --bg: #f5f7fb;
@@ -279,6 +280,60 @@
             padding: 22px;
         }
 
+        .map-panel {
+            margin-top: 18px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            background: linear-gradient(180deg, #fbfcff 0%, #f3f7ff 100%);
+        }
+
+        .map-panel-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 16px 18px 0;
+        }
+
+        .map-panel-head h3 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .map-panel-head p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .map-legend {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .legend-low { background: #dbeafe; }
+        .legend-mid { background: #60a5fa; }
+        .legend-high { background: #1d4ed8; }
+
+        #state-map {
+            width: 100%;
+            min-height: 420px;
+        }
+
         .results.hidden {
             display: none;
         }
@@ -513,6 +568,20 @@
                     </p>
                 </div>
             </div>
+            <div class="map-panel">
+                <div class="map-panel-head">
+                    <div>
+                        <h3>Affected State Map</h3>
+                        <p>Hover to see the alert count. Click a state to apply the same filter as the state chips below.</p>
+                    </div>
+                    <div class="map-legend">
+                        <span><span class="legend-swatch legend-low"></span> Low</span>
+                        <span><span class="legend-swatch legend-mid"></span> Medium</span>
+                        <span><span class="legend-swatch legend-high"></span> High</span>
+                    </div>
+                </div>
+                <div id="state-map"></div>
+            </div>
             <div class="state-strip" id="state-strip"></div>
             <div class="alert-grid" id="nationwide-alerts"></div>
             <p class="footnote">
@@ -541,6 +610,7 @@
         const refreshStatus = document.getElementById("refresh-status");
         const extremeFilterButton = document.getElementById("filter-extreme");
         const severeFilterButton = document.getElementById("filter-severe");
+        const stateMap = document.getElementById("state-map");
         const stateStrip = document.getElementById("state-strip");
         const nationwideAlerts = document.getElementById("nationwide-alerts");
         const statAlertCount = document.getElementById("stat-alert-count");
@@ -686,6 +756,110 @@
             });
         }
 
+        function renderStateMap(states) {
+            if (!window.Plotly) {
+                stateMap.innerHTML = "<div class=\"empty\" style=\"margin:18px;\">Map library did not load.</div>";
+                return;
+            }
+
+            if (!states.length) {
+                window.Plotly.purge(stateMap);
+                stateMap.innerHTML = "<div class=\"empty\" style=\"margin:18px;\">No affected states to map right now.</div>";
+                return;
+            }
+
+            const selectedState = stateFromQuery(activeFilter);
+            const locations = states.map((item) => item.state);
+            const values = states.map((item) => item.active_alerts);
+            const names = states.map((item) => STATE_NAMES[item.state] || item.state);
+            const customData = states.map((item) => [STATE_NAMES[item.state] || item.state, item.active_alerts]);
+
+            const traces = [
+                {
+                    type: "choropleth",
+                    locationmode: "USA-states",
+                    locations,
+                    z: values,
+                    zmin: 1,
+                    zmax: Math.max(...values),
+                    customdata: customData,
+                    colorscale: [
+                        [0, "#dbeafe"],
+                        [0.5, "#60a5fa"],
+                        [1, "#1d4ed8"]
+                    ],
+                    marker: {
+                        line: {
+                            color: "#ffffff",
+                            width: 1.2
+                        }
+                    },
+                    hovertemplate: "<b>%{customdata[0]}</b><br>Active alerts: %{customdata[1]}<extra></extra>",
+                    showscale: false
+                }
+            ];
+
+            if (selectedState) {
+                const selected = states.find((item) => item.state === selectedState);
+                if (selected) {
+                    traces.push({
+                        type: "choropleth",
+                        locationmode: "USA-states",
+                        locations: [selected.state],
+                        z: [selected.active_alerts],
+                        zmin: 1,
+                        zmax: Math.max(...values),
+                        colorscale: [
+                            [0, "#f97316"],
+                            [1, "#d92d20"]
+                        ],
+                        marker: {
+                            line: {
+                                color: "#172033",
+                                width: 2.5
+                            }
+                        },
+                        hovertemplate: `<b>${STATE_NAMES[selected.state] || selected.state}</b><br>Active alerts: ${selected.active_alerts}<extra>Selected</extra>`,
+                        showscale: false
+                    });
+                }
+            }
+
+            const layout = {
+                dragmode: false,
+                geo: {
+                    scope: "usa",
+                    projection: { type: "albers usa" },
+                    bgcolor: "rgba(0,0,0,0)",
+                    lakecolor: "#ffffff",
+                    showlakes: false,
+                    showland: true,
+                    landcolor: "#eef3ff",
+                    subunitcolor: "#ffffff"
+                },
+                margin: { l: 0, r: 0, t: 0, b: 0 },
+                paper_bgcolor: "rgba(0,0,0,0)",
+                plot_bgcolor: "rgba(0,0,0,0)"
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            window.Plotly.react(stateMap, traces, layout, config);
+            if (typeof stateMap.removeAllListeners === "function") {
+                stateMap.removeAllListeners("plotly_click");
+            }
+            stateMap.on("plotly_click", (event) => {
+                const point = event?.points?.[0];
+                const state = point?.location;
+                if (!state) return;
+                filterInput.value = state;
+                applyFilter(state);
+            });
+        }
+
         function renderAlertCard(alert) {
             const severityClass = alert.severity === "Extreme" ? "extreme" : "severe";
             const states = alert.states && alert.states.length ? alert.states.join(", ") : "Unknown";
@@ -725,6 +899,7 @@
             activeFilter = String(query || "").trim();
             const filteredAlerts = allAlerts.filter((alert) => matchesFilter(alert, activeFilter));
             syncSeverityButtons();
+            renderStateMap(allStates);
             renderStateStrip(allStates);
             renderNationwideAlerts(filteredAlerts);
             renderResultsSummary(filteredAlerts, activeFilter);
