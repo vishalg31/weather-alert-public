@@ -1024,10 +1024,15 @@
 
         function renderAlertCard(alert) {
             const severityClass = alert.severity === "Extreme" ? "extreme" : "severe";
+            const isUpcoming = alert.onset_status === "UPCOMING";
             const states = alert.states && alert.states.length ? alert.states.join(", ") : "Unknown";
             const areas = alert.areas && alert.areas.length ? alert.areas.join(", ") : alert.area_desc || "Area unavailable";
             const instruction = alert.instruction ? `<div class="alert-meta"><strong>Instruction:</strong> ${escapeHtml(alert.instruction)}</div>` : "";
             const countdown = buildCountdownMarkup(alert);
+            const startLabel = isUpcoming ? "Starts At" : "Effective";
+            const startValue = isUpcoming
+                ? formatTimestamp(alert.onset || alert.effective)
+                : formatTimestamp(alert.effective || alert.onset);
             return `
                 <article class="alert-card ${severityClass}">
                     <div class="alert-top">
@@ -1039,7 +1044,7 @@
                     <div class="alert-areas"><strong>Areas:</strong> ${escapeHtml(areas)}</div>
                     <div class="alert-meta"><strong>Onset Status:</strong> ${escapeHtml(alert.onset_status || "ACTIVE")}</div>
                     ${countdown}
-                    <div class="alert-meta"><strong>Effective:</strong> ${escapeHtml(formatTimestamp(alert.effective || alert.onset))}</div>
+                    <div class="alert-meta"><strong>${startLabel}:</strong> ${escapeHtml(startValue)}</div>
                     <div class="alert-meta"><strong>Expires:</strong> ${escapeHtml(formatTimestamp(alert.expires || alert.ends))}</div>
                     ${instruction}
                 </article>
