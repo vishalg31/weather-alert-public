@@ -38,10 +38,82 @@
 
         a { color: inherit; }
 
+        #header-placeholder {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+        }
+
+        .site-header {
+            background: rgba(9, 9, 11, 0.86);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(14px);
+        }
+
+        .site-header .container,
+        .site-footer .container {
+            width: min(1120px, calc(100% - 2rem));
+            margin: 0 auto;
+        }
+
+        .header-shell {
+            min-height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .logo a {
+            color: #f5f7fa;
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+        }
+
+        .site-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .site-nav a,
+        .site-footer a {
+            color: #b3bac5;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .site-nav a:hover,
+        .site-nav a:focus-visible,
+        .logo a:hover,
+        .logo a:focus-visible,
+        .site-footer a:hover,
+        .site-footer a:focus-visible {
+            color: #ffffff;
+        }
+
         .page {
             max-width: 1240px;
             margin: 0 auto;
             padding: 32px 20px 48px;
+        }
+
+        #footer-placeholder {
+            padding: 0 0 2rem;
+        }
+
+        .site-footer {
+            border-top: 1px solid rgba(23, 32, 51, 0.1);
+            background: rgba(9, 9, 11, 0.92);
+        }
+
+        .footer-shell {
+            padding-top: 1.35rem;
+            padding-bottom: 0.4rem;
+            color: #b3bac5;
+            font-size: 0.92rem;
         }
 
         .hero {
@@ -525,6 +597,16 @@
         }
 
         @media (max-width: 960px) {
+            .header-shell,
+            .site-nav {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-shell {
+                padding: 1rem 0;
+            }
+
             .stats {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -565,6 +647,7 @@
     </style>
 </head>
 <body>
+    <div id="header-placeholder"></div>
     <div class="page">
         <section class="hero">
             <div class="hero-top">
@@ -705,8 +788,11 @@
         </section>
     </div>
     <button class="back-to-top" id="back-to-top" type="button" aria-label="Back to top" title="Back to top">&#9729;</button>
+    <div id="footer-placeholder"></div>
 
     <script>
+        const headerPlaceholder = document.getElementById("header-placeholder");
+        const footerPlaceholder = document.getElementById("footer-placeholder");
         const STATE_NAMES = {
             AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
             CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
@@ -750,6 +836,17 @@
         let activeFilter = "";
         let lastGeneratedAt = "";
         let severityFilter = { Extreme: true, Severe: true };
+
+        async function loadComponent(path, element) {
+            if (!element) return;
+            try {
+                const response = await fetch(path);
+                if (!response.ok) throw new Error(`Unable to load ${path}`);
+                element.innerHTML = await response.text();
+            } catch (error) {
+                console.error(error);
+            }
+        }
 
         function formatTimestamp(value) {
             if (!value) return "-";
@@ -1182,6 +1279,8 @@
         });
 
         syncSeverityButtons();
+        loadComponent("./components/header.html", headerPlaceholder);
+        loadComponent("./components/footer.html", footerPlaceholder);
         loadNationwide(false);
         window.setInterval(() => {
             if (allAlerts.length) applyFilter(activeFilter);
