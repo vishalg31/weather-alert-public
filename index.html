@@ -48,6 +48,7 @@
             background: rgba(9, 9, 11, 0.86);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(14px);
+            transition: transform 0.24s ease, background 0.24s ease;
         }
 
         .site-header .container,
@@ -57,7 +58,7 @@
         }
 
         .header-shell {
-            min-height: 68px;
+            min-height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -66,7 +67,7 @@
 
         .logo a {
             color: #f5f7fa;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-decoration: none;
@@ -75,7 +76,7 @@
         .site-nav {
             display: flex;
             align-items: center;
-            gap: 1.2rem;
+            gap: 0.8rem;
         }
 
         .site-nav a,
@@ -85,6 +86,10 @@
             transition: color 0.2s ease;
         }
 
+        .site-nav a {
+            font-size: 0.84rem;
+        }
+
         .site-nav a:hover,
         .site-nav a:focus-visible,
         .logo a:hover,
@@ -92,40 +97,6 @@
         .site-footer a:hover,
         .site-footer a:focus-visible {
             color: #ffffff;
-        }
-
-        .app-bar-wrap {
-            position: sticky;
-            top: 68px;
-            z-index: 30;
-            padding: 12px 0 0;
-        }
-
-        .app-bar {
-            width: min(1240px, calc(100% - 2rem));
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.9rem 1rem;
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(23, 32, 51, 0.08);
-            box-shadow: 0 14px 34px rgba(23, 32, 51, 0.1);
-            backdrop-filter: blur(12px);
-        }
-
-        .app-bar-title {
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: var(--ink);
-            letter-spacing: 0.02em;
-        }
-
-        .app-bar-note {
-            font-size: 0.82rem;
-            color: var(--muted);
         }
 
         .page {
@@ -633,27 +604,23 @@
         @media (max-width: 960px) {
             .header-shell {
                 min-height: auto;
-                padding: 0.9rem 0;
+                padding: 0.65rem 0;
                 flex-direction: column;
                 align-items: flex-start;
             }
 
             .site-nav {
                 width: 100%;
-                gap: 0.75rem;
+                gap: 0.55rem;
                 flex-wrap: wrap;
             }
 
             .site-nav a {
-                font-size: 0.88rem;
-                padding: 0.35rem 0.55rem;
+                font-size: 0.8rem;
+                padding: 0.28rem 0.5rem;
                 border-radius: 999px;
                 background: rgba(255, 255, 255, 0.04);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-            }
-
-            .app-bar-wrap {
-                top: 104px;
             }
 
             .stats {
@@ -681,15 +648,6 @@
 
         @media (max-width: 640px) {
             .page { padding: 20px 14px 40px; }
-            .app-bar {
-                width: calc(100% - 1.5rem);
-                padding: 0.8rem 0.9rem;
-                border-radius: 16px;
-            }
-            .app-bar-wrap {
-                top: 110px;
-                padding-top: 10px;
-            }
             .hero { padding: 16px 16px; border-radius: 22px; }
             .stats { grid-template-columns: 1fr; }
             .controls,
@@ -706,14 +664,6 @@
 </head>
 <body>
     <div id="header-placeholder"></div>
-    <div class="app-bar-wrap">
-        <div class="app-bar">
-            <div>
-                <div class="app-bar-title">Public Weather Monitor</div>
-                <div class="app-bar-note">Severe and extreme alerts, nationwide</div>
-            </div>
-        </div>
-    </div>
     <div class="page">
         <section class="hero">
             <div class="hero-top">
@@ -902,6 +852,7 @@
         let activeFilter = "";
         let lastGeneratedAt = "";
         let severityFilter = { Extreme: true, Severe: true };
+        let lastScrollY = window.scrollY;
 
         async function loadComponent(path, element) {
             if (!element) return;
@@ -912,6 +863,19 @@
             } catch (error) {
                 console.error(error);
             }
+        }
+
+        function syncHeaderVisibility() {
+            const currentScrollY = window.scrollY;
+            const scrollingDown = currentScrollY > lastScrollY;
+            const shouldHide = scrollingDown && currentScrollY > 120;
+            const siteHeader = headerPlaceholder.querySelector(".site-header");
+
+            if (siteHeader) {
+                siteHeader.style.transform = shouldHide ? "translateY(-100%)" : "translateY(0)";
+            }
+
+            lastScrollY = currentScrollY;
         }
 
         function formatTimestamp(value) {
@@ -1342,6 +1306,7 @@
 
         window.addEventListener("scroll", () => {
             backToTopButton.classList.toggle("visible", window.scrollY > 520);
+            syncHeaderVisibility();
         });
 
         syncSeverityButtons();
