@@ -94,6 +94,40 @@
             color: #ffffff;
         }
 
+        .app-bar-wrap {
+            position: sticky;
+            top: 68px;
+            z-index: 30;
+            padding: 12px 0 0;
+        }
+
+        .app-bar {
+            width: min(1240px, calc(100% - 2rem));
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.9rem 1rem;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(23, 32, 51, 0.08);
+            box-shadow: 0 14px 34px rgba(23, 32, 51, 0.1);
+            backdrop-filter: blur(12px);
+        }
+
+        .app-bar-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: 0.02em;
+        }
+
+        .app-bar-note {
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
         .page {
             max-width: 1240px;
             margin: 0 auto;
@@ -618,6 +652,10 @@
                 border: 1px solid rgba(255, 255, 255, 0.08);
             }
 
+            .app-bar-wrap {
+                top: 104px;
+            }
+
             .stats {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -643,6 +681,15 @@
 
         @media (max-width: 640px) {
             .page { padding: 20px 14px 40px; }
+            .app-bar {
+                width: calc(100% - 1.5rem);
+                padding: 0.8rem 0.9rem;
+                border-radius: 16px;
+            }
+            .app-bar-wrap {
+                top: 110px;
+                padding-top: 10px;
+            }
             .hero { padding: 16px 16px; border-radius: 22px; }
             .stats { grid-template-columns: 1fr; }
             .controls,
@@ -659,6 +706,14 @@
 </head>
 <body>
     <div id="header-placeholder"></div>
+    <div class="app-bar-wrap">
+        <div class="app-bar">
+            <div>
+                <div class="app-bar-title">Public Weather Monitor</div>
+                <div class="app-bar-note">Severe and extreme alerts, nationwide</div>
+            </div>
+        </div>
+    </div>
     <div class="page">
         <section class="hero">
             <div class="hero-top">
