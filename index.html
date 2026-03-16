@@ -597,14 +597,25 @@
         }
 
         @media (max-width: 960px) {
-            .header-shell,
-            .site-nav {
+            .header-shell {
+                min-height: auto;
+                padding: 0.9rem 0;
                 flex-direction: column;
                 align-items: flex-start;
             }
 
-            .header-shell {
-                padding: 1rem 0;
+            .site-nav {
+                width: 100%;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+
+            .site-nav a {
+                font-size: 0.88rem;
+                padding: 0.35rem 0.55rem;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
             }
 
             .stats {
